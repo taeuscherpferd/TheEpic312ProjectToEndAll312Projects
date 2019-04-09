@@ -150,7 +150,7 @@ class TSPSolver:
         startTime = time.time()
         self.nodeCount = 0
         self.nodesPruned = 0
-        self.cityList = self._scenario.getCities()
+        self.cityList = deepcopy(self._scenario.getCities())
         cityCount = len(self.cityList)
         cityMatrix = [[0 for y in range(cityCount)] for x in range(cityCount)]
 
