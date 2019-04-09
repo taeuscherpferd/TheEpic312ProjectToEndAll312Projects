@@ -279,6 +279,18 @@ class TSPSolver:
 	'''
 
     def fancy(self, time_allowance=60.0):
+        results = {}
+        start_time = time.time()
+
+        end_time = time.time()
+        results['cost'] = math.inf
+        results['time'] = end_time - start_time
+        results['count'] = math.inf
+        results['soln'] = None
+        results['max'] = None
+        results['total'] = None
+        results['pruned'] = None
+        return results
         pass
 
     # make the cities into a matrix
