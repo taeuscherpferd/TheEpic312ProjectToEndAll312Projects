@@ -97,7 +97,7 @@ class TSPSolver:
         start_time = time.time()
         results = {}
         count = 0
-        cities = copy.deepcopy(self._scenario.getCities())
+        cities = self._scenario.getCities().copy()
         bssf = None
         foundTour = False
         route = []
@@ -165,7 +165,7 @@ class TSPSolver:
                     continue
                 cityMatrix[row][col] = self.cityList[row].costTo(self.cityList[col])
 
-        #Calculate the initial reduced matrix 
+        #Calculate the initial reduced matrix
         #Time: O(n^2)
         #Space: O(n^2)
         lowerBoundMatrix, lowerBound = self.calcLowerBoundMatrix(np.array(cityMatrix), cityCount)
@@ -176,9 +176,9 @@ class TSPSolver:
         numSolutionsFound += 1
         heapq.heappush(self.q, startNode)
 
-        elapsedTime = time.time() - startTime 
+        elapsedTime = time.time() - startTime
 
-        #Quit on time out or if queue is empty. 
+        #Quit on time out or if queue is empty.
         while elapsedTime < time_allowance and not len(self.q) == 0:
             qCounts.append(len(self.q))
             curLowestMatrix = heapq.heappop(self.q)
@@ -191,15 +191,15 @@ class TSPSolver:
 
             #Expand the children
             self.expandNode(curLowestMatrix, cityCount, bssf)
-            elapsedTime = time.time() - startTime 
-        
+            elapsedTime = time.time() - startTime
+
         results['cost'] = bssf.cost
         results['time'] = time.time() - startTime
         results['count'] = numSolutionsFound #num solutions found
         results['soln'] = bssf
         results['max'] = max(qCounts)
-        results['total'] = self.nodeCount 
-        results['pruned'] = self.nodesPruned 
+        results['total'] = self.nodeCount
+        results['pruned'] = self.nodesPruned
         return results
 
     def expandNode(self, curLowestMatrix, size, bssf):
@@ -219,15 +219,15 @@ class TSPSolver:
             for x in range(size):
                contenderMatrix[curLocation][x] = math.inf
 
-            curCost = matrix[curLocation][col] 
+            curCost = matrix[curLocation][col]
             if curCost == math.inf:
                continue
-            
+
             #Make the current column infinity O(n)
             for x in range(size):
                contenderMatrix[x][col] = math.inf
 
-            #Calculate the reduced matrix 
+            #Calculate the reduced matrix
             #Time: O(n^2)
             #Space: O(n^2)
             contenderMatrix, contLowerbound = self.calcLowerBoundMatrix(contenderMatrix, size)
@@ -257,7 +257,7 @@ class TSPSolver:
                 continue
               lowerbound += minim
               matrix[i, :] -= minim
-              
+
         #Time: O(n^2)
         #Space: O(n^2)
         for i in range(size):
@@ -272,10 +272,10 @@ class TSPSolver:
     ''' <summary>
 		This is the entry point for the algorithm you'll write for your group project.
 		</summary>
-		<returns>results dictionary for GUI that contains three ints: cost of best solution, 
-		time spent to find best solution, total number of solutions found during search, the 
+		<returns>results dictionary for GUI that contains three ints: cost of best solution,
+		time spent to find best solution, total number of solutions found during search, the
 		best solution found.  You may use the other three field however you like.
-		algorithm</returns> 
+		algorithm</returns>
 	'''
 
     def fancy(self, time_allowance=60.0):
