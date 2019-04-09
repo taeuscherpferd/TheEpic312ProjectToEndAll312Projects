@@ -243,6 +243,17 @@ class TSPSolver:
     def fancy(self, time_allowance=60.0):
         pass
 
+    # make the cities into a matrix
+    def make_matrix(self):  # O(n^2) # O(n)
+        whole_array = []
+        cities = self._scenario.getCities()
+        for city_from in cities:  # O(n^2) # O(n)
+            from_to_array = []
+            for city_to in cities:  # O(n) # O(n)
+                from_to_array.append(city_from.costTo(city_to))  # O(1) # O(1)
+            whole_array.append(from_to_array)
+        return np.array(whole_array)  # O(n) # O(n)
+
 #My Node class
 class SearchState:
     def __init__(self, matrix, lowerBound, depth, path):
