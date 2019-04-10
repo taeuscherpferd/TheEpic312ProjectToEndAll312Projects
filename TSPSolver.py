@@ -92,43 +92,48 @@ class TSPSolver:
 		solution found, and three null values for fields not used for this
 		algorithm</returns>
 	'''
+    def findLowest( self, cities, route, city ):
+        closest = None
+        cost = np.inf
+        for c in cities:
+            if c in route:
+                pass
+            elif city.costTo( c ) < cost:
+                cost = city.costTo( c )
+                closest = c
+        return closest
 
     def greedy(self, time_allowance=60.0):
-        start_time = time.time()
-        results = {}
-        count = 0
         cities = self._scenario.getCities().copy()
-        bssf = None
+        ncities = len( cities )
+
         foundTour = False
-        route = []
-        route_cost = 0
-        route.append(cities[0])
-        cities.remove(cities[0])
-        prev_city = cities[0]
+
+        start_time = time.time()
+
         # while there are cities left to add
-        while len(cities) > 0 and time.time() - start_time < time_allowance:
-            # add the next city with the lowest path cost
-            lowest_cost = math.inf
-            lowest_cost_city = 0
-            for city in cities:
-                cost = prev_city.costTo(city)
-                if cost <= lowest_cost:
-                    lowest_cost = cost
-                    lowest_cost_city = city
-            cities.remove(lowest_cost_city)
-            route.append(lowest_cost_city)
-            route_cost += lowest_cost
-            prev_city = lowest_cost_city
-        bssf = TSPSolution(route)
-        if bssf.cost < np.inf:
-            # Found a valid route
-            foundTour = True
-            count += 1
+        while not foundTour and time.time() - start_time < time_allowance:
+            for i in range( ncities ):
+                tmp_route = [ cities[i] ]
+                while len( tmp_route ) < ncities:
+                    closest = self.findLowest( cities, tmp_route, tmp_route[ -1 ] )
+                    if closest == None:
+                        break
+                    else:
+                        tmp_route.append( closest )
+
+                if TSPSolution( tmp_route )._costOfRoute() < np.inf:
+                    route = TSPSolution( tmp_route )
+                    cost = TSPSolution( tmp_route )._costOfRoute()
+                    foundTour = True
+
         end_time = time.time()
-        results['cost'] = bssf.cost if foundTour else math.inf
+
+        results = {}
+        results['cost'] = cost if foundTour else math.inf
         results['time'] = end_time - start_time
-        results['count'] = count
-        results['soln'] = bssf
+        results['count'] = 0
+        results['soln'] = route if foundTour else None
         results['max'] = None
         results['total'] = None
         results['pruned'] = None
@@ -282,6 +287,35 @@ class TSPSolver:
         results = {}
         start_time = time.time()
 
+        cities = self._scenario.getCities()
+        ncities = len(cities)
+
+        original_matrix = self.make_matrix()
+        cost_lookup = [ {} for i in range(ncities) ]
+
+        # Inital cost lookup
+        for i in range( 1, ncities ):
+            cost_lookup[0][ (i, frozenset()) ] = original_matrix[ i, 0 ]
+
+        # 1st layer
+        for i in range( 1, ncities ):
+            for key in cost_lookup[0]:
+                if key[0] == i:
+                    pass
+                else:
+                    cost_lookup[1][ (i, key[1].union([key[0]]) ) ] = original_matrix[i][key[0]] + cost_lookup[0][key]
+
+        # >1 layers
+        for i in range( 2, ncities ):
+            for j in range( 1, ncities ):
+                values = np.array([])
+                for key in cost_lookup[i-1]:
+                    if key[0] == j:
+                        pass
+                    else:
+                        cost = original_matrix[j][key[0]] + cost_lookup[i-1][key]
+                        np.append(values, cost)
+
         end_time = time.time()
         results['cost'] = math.inf
         results['time'] = end_time - start_time
@@ -291,7 +325,6 @@ class TSPSolver:
         results['total'] = None
         results['pruned'] = None
         return results
-        pass
 
     # make the cities into a matrix
     def make_matrix(self):  # O(n^2) # O(n)
