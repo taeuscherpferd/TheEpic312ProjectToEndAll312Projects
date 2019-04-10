@@ -282,6 +282,13 @@ class TSPSolver:
         results = {}
         start_time = time.time()
 
+        # part of first layer...
+        matrix = self.make_matrix()
+        paths = {}
+        for i in range(len(matrix[0])):
+            if matrix[0][i] != math.inf:
+                paths[(i,None)] = matrix[0][i]
+
         end_time = time.time()
         results['cost'] = math.inf
         results['time'] = end_time - start_time
