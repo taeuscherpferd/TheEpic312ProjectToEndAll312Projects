@@ -43,7 +43,7 @@ def fancy(matrix):
     results['cost'] = np.inf
     results['time'] = end_time - start_time
     results['count'] = np.inf
-    results['soln'] = None
+    results['soln'] = cost_lookup
     results['max'] = None
     results['total'] = None
     results['pruned'] = None
