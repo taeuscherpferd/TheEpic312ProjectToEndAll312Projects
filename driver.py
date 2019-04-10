@@ -7,6 +7,7 @@ from TSPSolver import TSPSolver
 
 
 def fancy(matrix):
+    start_time = time.time()
     results = {}
     ncities = len(matrix[0])
 
