@@ -287,7 +287,7 @@ class TSPSolver:
         paths = {}
         for i in range(len(matrix[0])):
             if matrix[0][i] != math.inf:
-                paths[(i,None)] = matrix[0][i]
+                paths[([i],None)] = matrix[0][i]
 
         end_time = time.time()
         results['cost'] = math.inf
