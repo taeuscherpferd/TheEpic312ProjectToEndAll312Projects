@@ -118,8 +118,8 @@ class TSPSolver:
                 while len( tmp_route ) < ncities:
                     closest = self.findLowest( cities, tmp_route, tmp_route[ -1 ] )
                     if closest == None:
-                        break;
-                    else :
+                        break
+                    else:
                         tmp_route.append( closest )
 
                 if TSPSolution( tmp_route )._costOfRoute() < np.inf:
@@ -311,13 +311,23 @@ class TSPSolver:
         ncities = len(cities)
 
         original_matrix = self.make_matrix()
-        cost_lookup = {}
+        cost_lookup = [ {} for i in range(ncities) ]
 
         # Inital cost lookup
-        for city in cities:
-            cost_lookup[ (city._index, set()) ] = original_matrix[ city._index, 0 ]
+        for i in range( 1, ncities ):
+            cost_lookup[0][ (i, frozenset()) ] = original_matrix[ i, 0 ]
 
-        print( cost_lookup )
+        for i in range( 1, ncities ):
+            for j in range( 1, ncities ):
+                for key in cost_lookup[i-1]:
+                    if key[0] == j:
+                        pass
+                    else:
+                        cost_lookup[i][ (j, key[1].union([key[0]]) ) ] = original_matrix[j][key[0]] + cost_lookup[i-1][key]
+
+
+        for row in cost_lookup:
+            print( row )
 
         end_time = time.time()
         results['cost'] = math.inf
