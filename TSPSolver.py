@@ -92,21 +92,54 @@ class TSPSolver:
 		solution found, and three null values for fields not used for this
 		algorithm</returns>
 	'''
+    def findLowest( self, cities, route, city ):
+        closest = None
+        cost = np.inf
+        for c in cities:
+            if c in route:
+                pass
+            elif city.costTo( c ) < cost:
+                cost = city.costTo( c )
+                closest = c
+        return closest
 
     def greedy(self, time_allowance=60.0):
-        start_time = time.time()
-        results = {}
-        count = 0
         cities = self._scenario.getCities().copy()
-        bssf = None
+        ncities = len( cities )
+
         foundTour = False
-        route = []
-        route_cost = 0
-        route.append(cities[0])
-        cities.remove(cities[0])
-        prev_city = cities[0]
+
+        start_time = time.time()
+
         # while there are cities left to add
-        while len(cities) > 0 and time.time() - start_time < time_allowance:
+        while not foundTour and time.time() - start_time < time_allowance:
+            for i in range( ncities ):
+                tmp_route = [ cities[i] ]
+                while len( tmp_route ) < ncities:
+                    closest = self.findLowest( cities, tmp_route, tmp_route[ -1 ] )
+                    if closest == None:
+                        break;
+                    else :
+                        tmp_route.append( closest )
+
+                if TSPSolution( tmp_route )._costOfRoute() < np.inf:
+                    route = TSPSolution( tmp_route )
+                    cost = TSPSolution( tmp_route )._costOfRoute()
+                    foundTour = True
+
+        end_time = time.time()
+
+        results = {}
+        results['cost'] = cost if foundTour else math.inf
+        results['time'] = end_time - start_time
+        results['count'] = 0
+        results['soln'] = route if foundTour else None
+        results['max'] = None
+        results['total'] = None
+        results['pruned'] = None
+        return results
+
+        def comment( self ):
             # add the next city with the lowest path cost
             lowest_cost = math.inf
             lowest_cost_city = 0
@@ -124,15 +157,7 @@ class TSPSolver:
             # Found a valid route
             foundTour = True
             count += 1
-        end_time = time.time()
-        results['cost'] = bssf.cost if foundTour else math.inf
-        results['time'] = end_time - start_time
-        results['count'] = count
-        results['soln'] = bssf
-        results['max'] = None
-        results['total'] = None
-        results['pruned'] = None
-        return results
+
 
     ''' <summary>
 		This is the entry point for the branch-and-bound algorithm that you will implement
@@ -281,6 +306,18 @@ class TSPSolver:
     def fancy(self, time_allowance=60.0):
         results = {}
         start_time = time.time()
+
+        cities = self._scenario.getCities()
+        ncities = len(cities)
+
+        original_matrix = self.make_matrix()
+        cost_lookup = {}
+
+        # Inital cost lookup
+        for city in cities:
+            cost_lookup[ (city._index, set()) ] = original_matrix[ city._index, 0 ]
+
+        print( cost_lookup )
 
         end_time = time.time()
         results['cost'] = math.inf
