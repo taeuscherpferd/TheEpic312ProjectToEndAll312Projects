@@ -139,26 +139,6 @@ class TSPSolver:
         results['pruned'] = None
         return results
 
-        def comment( self ):
-            # add the next city with the lowest path cost
-            lowest_cost = math.inf
-            lowest_cost_city = 0
-            for city in cities:
-                cost = prev_city.costTo(city)
-                if cost <= lowest_cost:
-                    lowest_cost = cost
-                    lowest_cost_city = city
-            cities.remove(lowest_cost_city)
-            route.append(lowest_cost_city)
-            route_cost += lowest_cost
-            prev_city = lowest_cost_city
-        bssf = TSPSolution(route)
-        if bssf.cost < np.inf:
-            # Found a valid route
-            foundTour = True
-            count += 1
-
-
     ''' <summary>
 		This is the entry point for the branch-and-bound algorithm that you will implement
 		</summary>
@@ -317,17 +297,24 @@ class TSPSolver:
         for i in range( 1, ncities ):
             cost_lookup[0][ (i, frozenset()) ] = original_matrix[ i, 0 ]
 
+        # 1st layer
         for i in range( 1, ncities ):
+            for key in cost_lookup[0]:
+                if key[0] == i:
+                    pass
+                else:
+                    cost_lookup[1][ (i, key[1].union([key[0]]) ) ] = original_matrix[i][key[0]] + cost_lookup[0][key]
+
+        # >1 layers
+        for i in range( 2, ncities ):
             for j in range( 1, ncities ):
+                values = np.array([])
                 for key in cost_lookup[i-1]:
                     if key[0] == j:
                         pass
                     else:
-                        cost_lookup[i][ (j, key[1].union([key[0]]) ) ] = original_matrix[j][key[0]] + cost_lookup[i-1][key]
-
-
-        for row in cost_lookup:
-            print( row )
+                        cost = original_matrix[j][key[0]] + cost_lookup[i-1][key]
+                        np.append(values, cost)
 
         end_time = time.time()
         results['cost'] = math.inf
@@ -338,7 +325,6 @@ class TSPSolver:
         results['total'] = None
         results['pruned'] = None
         return results
-        pass
 
     # make the cities into a matrix
     def make_matrix(self):  # O(n^2) # O(n)
