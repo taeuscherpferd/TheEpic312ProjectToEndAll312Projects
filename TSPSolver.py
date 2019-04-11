@@ -104,28 +104,43 @@ class TSPSolver:
         return closest
 
     def greedy(self, time_allowance=60.0):
-        cities = self._scenario.getCities().copy()
+        # Get all the cities and the number of cities
+        cities = self._scenario.getCities()
         ncities = len( cities )
 
+        # Flag: exit when we find a solution
         foundTour = False
 
         start_time = time.time()
 
-        # while there are cities left to add
-        while not foundTour and time.time() - start_time < time_allowance:
-            for i in range( ncities ):
-                tmp_route = [ cities[i] ]
-                while len( tmp_route ) < ncities:
-                    closest = self.findLowest( cities, tmp_route, tmp_route[ -1 ] )
-                    if closest == None:
-                        break
-                    else:
-                        tmp_route.append( closest )
+        # Start from the first city in the list
+        start_city = 0
 
-                if TSPSolution( tmp_route )._costOfRoute() < np.inf:
-                    route = TSPSolution( tmp_route )
-                    cost = TSPSolution( tmp_route )._costOfRoute()
-                    foundTour = True
+        # Let each of the cities be the starting place
+        # Keep searching while no solution is found
+        while not foundTour and time.time() - start_time < time_allowance and start_city < ncities:
+            # Keep searching for any cities that we have not been to
+            # and add it to the route
+            tmp_route = [ cities[start_city] ]
+            while len( tmp_route ) < ncities:
+                # Find the city with the shortest distance from our current city
+                # and of which we have not yet been to.
+                closest = self.findLowest( cities, tmp_route, tmp_route[ -1 ] )
+                # Change the starting city if we hit a dead end
+                if closest == None:
+                    break
+                else:
+                    tmp_route.append( closest )
+
+            # If the route we found is a solution, then we are done
+            if TSPSolution( tmp_route )._costOfRoute() < np.inf:
+                route = TSPSolution( tmp_route )
+                cost = TSPSolution( tmp_route )._costOfRoute()
+                foundTour = True
+            else:
+                # Change the starting city to the next one in the list
+                start_city += 1
+
 
         end_time = time.time()
 
@@ -284,16 +299,17 @@ class TSPSolver:
 	'''
 
     def fancy(self, time_allowance=60.0):
-        results = {}
         start_time = time.time()
 
         cities = self._scenario.getCities()
         ncities = len(cities)
 
         original_matrix = self.make_matrix()
-        cost_lookup = [ {} for i in range(ncities) ]
 
-        ps = self.makePowerset(ncities)
+        #print( "---- ORIGINAL ----" )
+        #print( original_matrix )
+
+        cost_lookup = [ {} for i in range(ncities) ]
 
         # Inital cost lookup
         for i in range( 1, ncities ):
@@ -301,40 +317,72 @@ class TSPSolver:
 
         # 1st layer
         for i in range( 1, ncities ):
-            for key in cost_lookup[0]:
+            for key, value in cost_lookup[0].items():
                 if key[0] == i:
                     pass
                 else:
-                    cost_lookup[1][ (i, key[1].union([key[0]]) ) ] = Subproblem( original_matrix[i][key[0]] + cost_lookup[0][key].cost, i, cost_lookup[0][key].route )
+                    cost_lookup[1][ (i, key[1].union([key[0]]) ) ] = Subproblem( original_matrix[i][key[0]] + value.cost, i, value.route )
 
-
-        for row in cost_lookup:
-            print(row)
         # >1 layers
         for i in range( 2, ncities ):
             for j in range( 1, ncities ):
+                # Store each value and key for comparison later
                 value_array = []
                 key_array = []
-                for key in cost_lookup[i-1]:
+                # Loop through each item in the previous layer
+                # Skip if the city is in route
+                for key, value in cost_lookup[i-1].items():
                     if key[0] == j or j in key[1]:
                         pass
                     else:
+                        # Compose the new key for the current layer
                         p = (j, key[1].union([key[0]]) )
                         key_array.append(p)
-                        sub = Subproblem(original_matrix[j][key[0]] + cost_lookup[i-1][key].cost, j, cost_lookup[i-1][key].route )
+                        # Construct the new cost and route for the layer
+                        sub = Subproblem(original_matrix[j][key[0]] + value.cost, j, value.route )
                         value_array.append(sub)
+                        #print("p: {}, sub:{}".format(p, sub) )
 
-                min_idx = np.argmin(value_array)
-                print("min_idx: {}, k:{}, v: {}".format(min_idx,key_array[min_idx], value_array[min_idx]) )
-                cost_lookup[i][key_array[min_idx]] = value_array[min_idx]
+                # Input each value
+                # If there is already a value, choose whichever has a smaller cost
+                for value_idx, key in enumerate(key_array):
+                    if cost_lookup[i].get(key, None) == None:
+                        cost_lookup[i][key] = value_array[value_idx]
+                    else:
+                        cost_lookup[i][key] = min( cost_lookup[i][key], value_array[value_idx] )
 
+        # Last layer
+        # We need to do this because we have added every city to the set
+        # except for the starting city, so we need to add it "manually"
+        # We are not really storing the last value in the table
+        value_array = []
+        for key, value in cost_lookup[ncities-2].items():
+            sub = Subproblem(original_matrix[0][key[0]] + value.cost, 0, value.route)
+            value_array.append(sub)
+            #print("p: {}, sub:{}".format(p, sub) )
 
+        # Get the index in which the optimal solution is in
+        min_idx = np.argmin(value_array)
+        optimal = value_array[min_idx]
+
+        #self.printTable( cost_lookup )
+
+        # Get the cost, since we have already computed
+        cost = int(optimal.cost)
+
+        # Convert from city indices to actual cities
+        route = []
+        for i in range( ncities ):
+            route.append( cities[optimal.route[i]] )
+
+        #print( "Cost: {}".format(TSPSolution(route)._costOfRoute()) )
 
         end_time = time.time()
-        results['cost'] = math.inf
+        results = {}
+        results['cost'] = cost
         results['time'] = end_time - start_time
-        results['count'] = math.inf
-        results['soln'] = None
+        results['count'] = 1
+        results['soln'] = TSPSolution(route)
         results['max'] = None
         results['total'] = None
         results['pruned'] = None
@@ -351,23 +399,10 @@ class TSPSolver:
             whole_array.append(from_to_array)
         return np.array(whole_array)  # O(n) # O(n)
 
-    def makePowerset(self, ncities):
-        powerset = [frozenset()]
-        for i in range(ncities):
-            length=len(powerset)
-            for j in range(length):
-                subset = powerset[j].union([i])
-                powerset.append(subset)
-
-        for subset in powerset:
-            if 0 in subset:
-                powerset.remove(subset)
-
-        for subset in powerset:
-            if len(subset) < 2:
-                powerset.remove(subset)
-
-        return sorted(powerset[1:], key=len)
+    def printTable( self, table ):
+        for row in table:
+            for key, value in row.items():
+                print( "{}: {}".format(key, value) )
 
 class Subproblem:
     def __init__( self, cost, coming_from, route=[] ):
