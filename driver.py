@@ -1,13 +1,11 @@
 #!/usr/bin/python3
 
 import numpy as np
-import time
 
 from TSPSolver import TSPSolver
 
 
 def fancy(matrix):
-    start_time = time.time()
     results = {}
     ncities = len(matrix[0])
 
@@ -40,20 +38,20 @@ def fancy(matrix):
                     np.append(values, cost)
 
     end_time = time.time()
-    results['cost'] = np.inf
+    results['cost'] = math.inf
     results['time'] = end_time - start_time
-    results['count'] = np.inf
-    results['soln'] = cost_lookup
+    results['count'] = math.inf
+    results['soln'] = None
     results['max'] = None
     results['total'] = None
     results['pruned'] = None
     return results
 
 if __name__ == "__main__":
-    A = np.array([[np.inf, 7, 3, 12],
-                  [3, np.inf, 6, 14],
-                  [5, 8, np.inf, 6],
-                  [9, 3, 5, np.inf]])
+    A = np.array([[math.inf, 7, 3, 12],
+                  [3, math.inf, 6, 14],
+                  [5, 8, math.inf, 6],
+                  [9, 3, 5, math.inf]])
 
     print(A)
     print("*(**(*(**********")
