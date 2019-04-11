@@ -7,12 +7,17 @@ from TSPSolver import TSPSolution
 
 def find_not_visited(visited, ncities): # O(n)
     results = []
-    for i in range(ncities):
-        if i not in visited:
-            results.append(i)
-    if len(results) == ncities and len(visited) > 0:
-        results = [visited[0]]
-    return results
+    if len(visited) == ncities:
+        if len(visited) > 0:
+            results = [visited[0]]
+        return results
+    elif len(visited) > ncities:
+        return results
+    else:
+        for i in range(ncities):
+            if i not in visited:
+                results.append(i)
+        return results
 
 def fancy(matrix):
     start_time = time.time()
@@ -23,15 +28,16 @@ def fancy(matrix):
 
     layers = []
     next_layer = []
-    not_visited = find_not_visited([0], ncities)
+    origin_tuple = (0,)
+    not_visited = find_not_visited(origin_tuple, ncities)
     if len(not_visited) > 0:
         for i in not_visited:
             path_dict = {}
-            path_dict[0] = []
+            path_dict[origin_tuple] = []
             if original_matrix[0][i] != np.inf:
-                path_dict[0].append((i, original_matrix[0][i]))
-        if len(path_dict) > 0:
-            next_layer.append(path_dict)
+                path_dict[origin_tuple].append((i, original_matrix[0][i]))
+            if len(path_dict) > 0:
+                next_layer.append(path_dict)
     if len(next_layer) > 0:
         layers.append(next_layer)
 
@@ -48,14 +54,13 @@ def fancy(matrix):
                 min_tuple = min(a_dict[path], key = lambda a_tuple: a_tuple[1])
                 if min_tuple[1] == np.inf:
                     continue
-                next_path = path.copy()
-                next_path.append(min_tuple[0])
+                next_path = path + (min_tuple[0],)
                 path_dict = {}
                 path_dict[next_path] = []
-                not_visited = find_not_visited(path, ncities)
+                not_visited = find_not_visited(next_path, ncities)
                 for i in not_visited:
-                    path_dict[next_path].append((i, min_tuple[1] + original_matrix[path[-1]][i]))
-                if len(path_dict) > 0:
+                    path_dict[next_path].append((i, min_tuple[1] + original_matrix[next_path[-1]][i]))
+                if len(path_dict[next_path]) > 0:
                     next_layer.append(path_dict)
         if len(next_layer) == 0:
             break
@@ -71,8 +76,8 @@ def fancy(matrix):
                 a_min_tuple = min(a_dict[path], key=lambda a_tuple: a_tuple[1])
                 if a_min_tuple[1] < min_length:
                     min_length = a_min_tuple[1]
-                    min_path = path.copy()
-                    min_path.append(a_min_tuple[0])
+                    min_path = path + (a_min_tuple[0],)
+                    # min_path.append(a_min_tuple[0])
         if len(min_path) > 0 and min_path[0] == min_path[-1]:
             foundTour = True
             solution = TSPSolution(min_path)
