@@ -293,6 +293,8 @@ class TSPSolver:
         original_matrix = self.make_matrix()
         cost_lookup = [ {} for i in range(ncities) ]
 
+        ps = self.makePowerset(ncities)
+
         # Inital cost lookup
         for i in range( 1, ncities ):
             cost_lookup[0][ (i, frozenset()) ] = Subproblem( original_matrix[ i, 0 ], i )
@@ -305,6 +307,9 @@ class TSPSolver:
                 else:
                     cost_lookup[1][ (i, key[1].union([key[0]]) ) ] = Subproblem( original_matrix[i][key[0]] + cost_lookup[0][key].cost, i, cost_lookup[0][key].route )
 
+
+        for row in cost_lookup:
+            print(row)
         # >1 layers
         for i in range( 2, ncities ):
             for j in range( 1, ncities ):
@@ -318,11 +323,12 @@ class TSPSolver:
                         key_array.append(p)
                         sub = Subproblem(original_matrix[j][key[0]] + cost_lookup[i-1][key].cost, j, cost_lookup[i-1][key].route )
                         value_array.append(sub)
-                min_idx = np.argmin(sub)
+
+                min_idx = np.argmin(value_array)
+                print("min_idx: {}, k:{}, v: {}".format(min_idx,key_array[min_idx], value_array[min_idx]) )
                 cost_lookup[i][key_array[min_idx]] = value_array[min_idx]
 
-        for row in cost_lookup:
-            print(row)
+
 
         end_time = time.time()
         results['cost'] = math.inf
@@ -344,6 +350,24 @@ class TSPSolver:
                 from_to_array.append(city_from.costTo(city_to))  # O(1) # O(1)
             whole_array.append(from_to_array)
         return np.array(whole_array)  # O(n) # O(n)
+
+    def makePowerset(self, ncities):
+        powerset = [frozenset()]
+        for i in range(ncities):
+            length=len(powerset)
+            for j in range(length):
+                subset = powerset[j].union([i])
+                powerset.append(subset)
+
+        for subset in powerset:
+            if 0 in subset:
+                powerset.remove(subset)
+
+        for subset in powerset:
+            if len(subset) < 2:
+                powerset.remove(subset)
+
+        return sorted(powerset[1:], key=len)
 
 class Subproblem:
     def __init__( self, cost, coming_from, route=[] ):
