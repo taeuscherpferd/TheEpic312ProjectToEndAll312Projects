@@ -306,7 +306,9 @@ class TSPSolver:
 	'''
 
     def fancy(self, time_allowance=60.0):
+        time_allowance = time_allowance - .5
         start_time = time.time()
+        bssf = self.greedy(time_allowance)
 
         cities = self._scenario.getCities()
         ncities = len(cities)
@@ -329,6 +331,10 @@ class TSPSolver:
                     pass
                 else:
                     cost_lookup[1][ (i, key[1].union([key[0]]) ) ] = Subproblem( original_matrix[i][key[0]] + value.cost, i, value.route )
+                
+                if (time.time() - start_time > time_allowance):
+                    return self.createResultsDictionary(bssf['cost'], time.time() - start_time, bssf['count'], bssf['soln'], bssf['max'], bssf['total'], bssf['pruned'])
+        
 
         # >1 layers
         for i in range( 2, ncities ):
@@ -357,6 +363,9 @@ class TSPSolver:
                         cost_lookup[i][key] = value_array[value_idx]
                     else:
                         cost_lookup[i][key] = min( cost_lookup[i][key], value_array[value_idx] )
+                
+                if (time.time() - start_time > time_allowance):
+                    return self.createResultsDictionary(bssf['cost'], time.time() - start_time, bssf['count'], bssf['soln'], bssf['max'], bssf['total'], bssf['pruned'])
 
         # Last layer
         # We need to do this because we have added every city to the set
@@ -383,16 +392,17 @@ class TSPSolver:
             route.append( cities[optimal.route[i]] )
 
         #print( "Cost: {}".format(TSPSolution(route)._costOfRoute()) )
+        return self.createResultsDictionary(cost, time.time() - start_time, 1, TSPSolution(route), None, None, None)
 
-        end_time = time.time()
+    def createResultsDictionary(self, cost, time, count, soln, maxNodes, total, pruned):
         results = {}
         results['cost'] = cost
-        results['time'] = end_time - start_time
-        results['count'] = 1
-        results['soln'] = TSPSolution(route)
-        results['max'] = None
-        results['total'] = None
-        results['pruned'] = None
+        results['time'] = time
+        results['count'] = count
+        results['soln'] = soln
+        results['max'] = maxNodes
+        results['total'] = total 
+        results['pruned'] = pruned
         return results
 
     # make the cities into a matrix
