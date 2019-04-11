@@ -295,7 +295,7 @@ class TSPSolver:
 
         # Inital cost lookup
         for i in range( 1, ncities ):
-            cost_lookup[0][ (i, frozenset()) ] = original_matrix[ i, 0 ]
+            cost_lookup[0][ (i, frozenset()) ] = Subproblem( original_matrix[ i, 0 ], i )
 
         # 1st layer
         for i in range( 1, ncities ):
@@ -303,18 +303,26 @@ class TSPSolver:
                 if key[0] == i:
                     pass
                 else:
-                    cost_lookup[1][ (i, key[1].union([key[0]]) ) ] = original_matrix[i][key[0]] + cost_lookup[0][key]
+                    cost_lookup[1][ (i, key[1].union([key[0]]) ) ] = Subproblem( original_matrix[i][key[0]] + cost_lookup[0][key].cost, i, cost_lookup[0][key].route )
 
         # >1 layers
         for i in range( 2, ncities ):
             for j in range( 1, ncities ):
-                values = np.array([])
+                value_array = []
+                key_array = []
                 for key in cost_lookup[i-1]:
-                    if key[0] == j:
+                    if key[0] == j or j in key[1]:
                         pass
                     else:
-                        cost = original_matrix[j][key[0]] + cost_lookup[i-1][key]
-                        np.append(values, cost)
+                        p = (j, key[1].union([key[0]]) )
+                        key_array.append(p)
+                        sub = Subproblem(original_matrix[j][key[0]] + cost_lookup[i-1][key].cost, j, cost_lookup[i-1][key].route )
+                        value_array.append(sub)
+                min_idx = np.argmin(sub)
+                cost_lookup[i][key_array[min_idx]] = value_array[min_idx]
+
+        for row in cost_lookup:
+            print(row)
 
         end_time = time.time()
         results['cost'] = math.inf
@@ -336,6 +344,17 @@ class TSPSolver:
                 from_to_array.append(city_from.costTo(city_to))  # O(1) # O(1)
             whole_array.append(from_to_array)
         return np.array(whole_array)  # O(n) # O(n)
+
+class Subproblem:
+    def __init__( self, cost, coming_from, route=[] ):
+        self.cost = cost
+        self.route = [ coming_from ] + route
+
+    def __lt__( self, other ):
+        return self.cost < other.cost
+
+    def __str__( self ):
+        return "cost: {}, route: {}".format( self.cost, self.route )
 
 #My Node class
 class SearchState:
