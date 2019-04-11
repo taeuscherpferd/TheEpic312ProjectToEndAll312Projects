@@ -108,17 +108,21 @@ class TSPSolver:
         cities = self._scenario.getCities()
         ncities = len( cities )
 
-        # Flag: exit when we find a solution
-        foundTour = False
+        approx = self.defaultRandomTour()
+        cost = np.inf
+        route = approx['soln']
 
-        start_time = time.time()
+        # Decides whether we skip checking the solution or not
+        skip = False
 
         # Start from the first city in the list
         start_city = 0
 
+        start_time = time.time()
+
         # Let each of the cities be the starting place
-        # Keep searching while no solution is found
-        while not foundTour and time.time() - start_time < time_allowance and start_city < ncities:
+        # Get the best of all the solution we found
+        while (start_city < ncities) and (time.time() - start_time < time_allowance):
             # Keep searching for any cities that we have not been to
             # and add it to the route
             tmp_route = [ cities[start_city] ]
@@ -128,27 +132,30 @@ class TSPSolver:
                 closest = self.findLowest( cities, tmp_route, tmp_route[ -1 ] )
                 # Change the starting city if we hit a dead end
                 if closest == None:
+                    skip = True
                     break
                 else:
                     tmp_route.append( closest )
 
-            # If the route we found is a solution, then we are done
-            if TSPSolution( tmp_route )._costOfRoute() < np.inf:
-                route = TSPSolution( tmp_route )
-                cost = TSPSolution( tmp_route )._costOfRoute()
-                foundTour = True
+            if skip:
+                skip = False
             else:
-                # Change the starting city to the next one in the list
-                start_city += 1
+                # If the route we found is a better solution, replace it
+                if TSPSolution( tmp_route )._costOfRoute() < cost:
+                    route = TSPSolution( tmp_route )
+                    cost = TSPSolution( tmp_route )._costOfRoute()
+
+            # Change the starting city to the next one in the list
+            start_city += 1
 
 
         end_time = time.time()
 
         results = {}
-        results['cost'] = cost if foundTour else math.inf
+        results['cost'] = cost
         results['time'] = end_time - start_time
         results['count'] = 0
-        results['soln'] = route if foundTour else None
+        results['soln'] = route
         results['max'] = None
         results['total'] = None
         results['pruned'] = None
