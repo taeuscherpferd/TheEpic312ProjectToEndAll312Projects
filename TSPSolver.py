@@ -309,6 +309,8 @@ class TSPSolver:
         time_allowance = time_allowance - .5
         start_time = time.time()
         bssf = self.greedy(time_allowance)
+        if (time.time() - start_time > time_allowance):
+            return self.createResultsDictionary(bssf['cost'], time.time() - start_time, bssf['count'], bssf['soln'], bssf['max'], bssf['total'], bssf['pruned'])
 
         cities = self._scenario.getCities()
         ncities = len(cities)
