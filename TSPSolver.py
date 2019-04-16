@@ -170,131 +170,170 @@ class TSPSolver:
 		max queue size, total number of states created, and number of pruned states.</returns>
 	'''
 
-    def branchAndBound(self, time_allowance=60.0):
+    def branchAndBound( self, time_allowance=60.0 ):
+        # Reset the global values
+        self.max_queued = 0
+        self.total_nodes = 0
+        self.soln_cnt = 0
+        self.pruned = 0
+
+        # Get the cities and tyhe number of cities
+        cities = self._scenario.getCities()
+        ncities = len(cities)
+
+        # Use default calculation for the
+        # inital solution approximation
+        approx = self.greedy()
+        bssf = approx['soln']
+        cost = approx['cost']
+
+        # Make the original cost matrix
+        ocost = self.makeCostMatrix( cities )
+        # Copy the cost matrix, then make the
+        # reduced-cost matrix, get the lower
+        # bound at the same time
+        rcost = ocost.copy()
+        lb = self.reduceMatrix( rcost )
+
+        # Use heapq package for the implementation
+        queue = []
+
+        start_time = time.time()
+
+        # Push the root problem onto the queue
+        heapq.heappush( queue, Node( rcost, lb, [], cities[0] ) )
+        self.total_nodes += 1
+
+        while queue and time.time()-start_time < time_allowance:
+            # Get the subproblem that has the most potential
+            # to be a solution
+            node = heapq.heappop( queue )
+
+            # Check to see if we have found a potential
+            if node.depth() == ncities:
+                # Calculate the cost
+                potential = TSPSolution( node.path() ).cost
+                # If the potential is better than what we
+                # currently have, make potential main
+                if potential < cost:
+                    bssf = TSPSolution( node.path() )
+                    cost = potential
+                    self.soln_cnt += 1
+            # If the subproblem is still partial,
+            # expand the subproblem
+            else:
+                self.expand( queue, cities, node, cost )
+
+        end_time = time.time()
+
+        # Construct the result struct
         results = {}
-        qCounts = []
-        numSolutionsFound = 0
-        startTime = time.time()
-        self.nodeCount = 0
-        self.nodesPruned = 0
-        self.cityList = deepcopy(self._scenario.getCities())
-        cityCount = len(self.cityList)
-        cityMatrix = [[0 for y in range(cityCount)] for x in range(cityCount)]
-
-        #Use the random path to start off with
-        bssf = self.defaultRandomTour(time_allowance)['soln']
-
-        #Generate the starting matrix O(n^2)
-        for row in range(cityCount):
-            for col in range(cityCount):
-                if col == row:
-                    cityMatrix[row][col] = math.inf
-                    continue
-                cityMatrix[row][col] = self.cityList[row].costTo(self.cityList[col])
-
-        #Calculate the initial reduced matrix
-        #Time: O(n^2)
-        #Space: O(n^2)
-        lowerBoundMatrix, lowerBound = self.calcLowerBoundMatrix(np.array(cityMatrix), cityCount)
-
-        startNode = SearchState(lowerBoundMatrix, lowerBound, 0, [0])
-
-        self.nodeCount += 1
-        numSolutionsFound += 1
-        heapq.heappush(self.q, startNode)
-
-        elapsedTime = time.time() - startTime
-
-        #Quit on time out or if queue is empty.
-        while elapsedTime < time_allowance and not len(self.q) == 0:
-            qCounts.append(len(self.q))
-            curLowestMatrix = heapq.heappop(self.q)
-
-            #If the current path is complete update the BSSF
-            if (len(curLowestMatrix.path) == cityCount):
-                numSolutionsFound += 1
-                actualCities = [self.cityList[x] for x in curLowestMatrix.path]
-                bssf = TSPSolution(actualCities)
-
-            #Expand the children
-            self.expandNode(curLowestMatrix, cityCount, bssf)
-            elapsedTime = time.time() - startTime
-
-        results['cost'] = bssf.cost
-        results['time'] = time.time() - startTime
-        results['count'] = numSolutionsFound #num solutions found
+        results['cost'] = cost
+        results['time'] = end_time - start_time
+        results['count'] = self.soln_cnt
         results['soln'] = bssf
-        results['max'] = max(qCounts)
-        results['total'] = self.nodeCount
-        results['pruned'] = self.nodesPruned
+        results['max'] = self.max_queued
+        results['total'] = self.total_nodes
+        results['pruned'] = self.pruned
         return results
 
-    def expandNode(self, curLowestMatrix, size, bssf):
-        matrix = curLowestMatrix.matrix
-        curLowerBound = curLowestMatrix.lowerBound
-        curPath = curLowestMatrix.path
-        curDepth = curLowestMatrix.depth
-        curLocation = curPath[-1]
-        npArray = np.array(matrix)
+    def makeCostMatrix( self, cities ):
+        size = len(cities)
+        # Construct a n by n matrix
+        matrix = np.zeros( (size, size) )
+        # Input the values
+        for row in range( size ):
+            for col in range( size ):
+                matrix[ row ][ col ] = cities[ row ].costTo( cities[ col ] )
+        return matrix
 
-        #Time: O(n^3)
-        #Space O(n^2)
-        for col in range(size):
-            contenderMatrix = npArray.copy()
+    def reduceMatrix( self, matrix ):
+        lb = 0
+        # Get all the indices of all the minimum
+        # values for each row, then minus each row
+        # according to it's minimum values.
+        # Also increment the lower bound accordingly.
+        # Skip if the row is all infinity.
+        rows = np.argmin( matrix, axis = 1 )
+        for r_idx in range( len( matrix ) ):
+            min_value = matrix[ r_idx ][ rows[ r_idx ] ]
+            if min_value != np.inf:
+                lb += min_value
+                for c_idx in range( len( matrix[0] ) ):
+                    matrix[ r_idx ][ c_idx ] -= min_value
 
-            #Make the current row infinity O(n)
-            for x in range(size):
-               contenderMatrix[curLocation][x] = math.inf
+        # Get all the indices of all the minimum
+        # values for each column, then minus each
+        # column according to it's minimum values.
+        # Also increment the lower bound accordingly.
+        # Skip if the column is all infinity.
+        cols = np.argmin( matrix, axis = 0 )
+        for c_idx in range( len( matrix[0] ) ):
+            min_value = matrix[ cols[ c_idx ] ][ c_idx ]
+            if min_value != np.inf:
+                lb += min_value
+                for r_idx in range( len( matrix ) ):
+                    matrix[ r_idx ][ c_idx ] -= min_value
+        return lb
 
-            curCost = matrix[curLocation][col]
-            if curCost == math.inf:
-               continue
+    def expand( self, queue, cities, node, cost ):
+        # If the lower bound is higher than bssf cost
+        # DROP IT LIKE IT'S HOT
+        if node.lowerBound() > cost:
+            self.pruned += 1
+            return
 
-            #Make the current column infinity O(n)
-            for x in range(size):
-               contenderMatrix[x][col] = math.inf
+        # Get the current city information because
+        # we are exploring from there.
+        # Also get the reduced cost matrix because
+        # we need to check whether the next city
+        # is reachable from where we are.
+        start_city = node.last()
+        rmatrix = node.rMatrix()
 
-            #Calculate the reduced matrix
-            #Time: O(n^2)
-            #Space: O(n^2)
-            contenderMatrix, contLowerbound = self.calcLowerBoundMatrix(contenderMatrix, size)
-            contLowerbound += curCost
-            contLowerbound += curLowerBound
+        # Loop through almost all cities' indices
+        # (Skip city 1 because we start from there)
+        # We only explore the cities that are reachable
+        # from where we are.
+        for i in range( 1, len( rmatrix ) ):
+            if node.rMatrix()[ start_city._index, i ] != np.inf:
+                new_node = self.explore( cities, node, start_city._index, i )
+                self.total_nodes += 1
 
-            newPath = deepcopy(curPath)
-            newPath.append(col)
+                # We keep all possibilities as long as
+                # its lowerbound is smaller than our current cost.
+                # Put it in the queue biew biew
+                if new_node.lowerBound() <= cost:
+                    heapq.heappush( queue, new_node )
+                    if len( queue ) > self.max_queued:
+                        self.max_queued = len( queue )
+                else:
+                    self.pruned += 1
 
-            contNode = SearchState(contenderMatrix, contLowerbound, curDepth + 1, newPath)
-            self.nodeCount += 1
+    def explore( self, cities, node, start_idx, end_idx ):
+        # Now we really need a copy of the matrix
+        rmatrix = node.rMatrix().copy()
 
-            #Checks against the best solution so far. If better, add to queue else, prune
-            if contLowerbound < bssf.cost:
-                heapq.heappush(self.q, contNode)
-            else:
-                self.nodesPruned += 1
+        # Get the lower bound plus any additional
+        # cost to explore the particular city
+        lb = node.lowerBound() + rmatrix[ start_idx, end_idx ]
+        # Copy copy the path
+        path = node.path().copy()
 
-    def calcLowerBoundMatrix(self, matrix, size):
-        lowerbound = 0
+        # Make the row all infinity
+        for col in range( len(rmatrix) ):
+            rmatrix[ start_idx ][ col ] = np.inf
+            # Make the column all infinity
+        for row in range( len(rmatrix) ):
+            rmatrix[ row ][ end_idx ] = np.inf
 
-        #Time: O(n^2)
-        #Space: O(n^2)
-        for i in range(size):
-              minim = np.min(matrix[i, :])
-              if minim == math.inf:
-                continue
-              lowerbound += minim
-              matrix[i, :] -= minim
+        # No more turnning back
+        rmatrix[ end_idx ][ start_idx ] = np.inf
+        # Reduce the matrix and add on
+        # additional lower bound
+        lb += self.reduceMatrix( rmatrix )
+        return Node( rmatrix, lb, path, cities[ end_idx ] )
 
-        #Time: O(n^2)
-        #Space: O(n^2)
-        for i in range(size):
-              minim = np.min(matrix[:, i])
-              if minim == math.inf:
-                continue
-              lowerbound += minim
-              matrix[:, i] -= minim
-
-        return matrix, lowerbound
 
     ''' <summary>
 		This is the entry point for the algorithm you'll write for your group project.
@@ -333,10 +372,10 @@ class TSPSolver:
                     pass
                 else:
                     cost_lookup[1][ (i, key[1].union([key[0]]) ) ] = Subproblem( original_matrix[i][key[0]] + value.cost, i, value.route )
-                
+
                 if (time.time() - start_time > time_allowance):
                     return self.createResultsDictionary(bssf['cost'], time.time() - start_time, bssf['count'], bssf['soln'], bssf['max'], bssf['total'], bssf['pruned'])
-        
+
 
         # >1 layers
         for i in range( 2, ncities ):
@@ -365,7 +404,7 @@ class TSPSolver:
                         cost_lookup[i][key] = value_array[value_idx]
                     else:
                         cost_lookup[i][key] = min( cost_lookup[i][key], value_array[value_idx] )
-                
+
                 if (time.time() - start_time > time_allowance):
                     return self.createResultsDictionary(bssf['cost'], time.time() - start_time, bssf['count'], bssf['soln'], bssf['max'], bssf['total'], bssf['pruned'])
 
@@ -403,7 +442,7 @@ class TSPSolver:
         results['count'] = count
         results['soln'] = soln
         results['max'] = maxNodes
-        results['total'] = total 
+        results['total'] = total
         results['pruned'] = pruned
         return results
 
@@ -444,3 +483,34 @@ class SearchState:
 
     def __lt__(self, other):
         return (self.lowerBound / self.depth) < other.lowerBound / other.depth
+
+class Node:
+    def __init__( self, reduced_matrix, lb, path, dest ):
+        self.rmatrix = reduced_matrix
+        self.lb = lb
+        self.pppath = path + [ dest ]    # Add the new city to the path
+
+    # This is used for the heapq to sort
+    # Prioritize depth over lower bound
+    def __lt__( self, other ):
+        if self.depth() == other.depth():
+            return self.lowerBound() < other.lowerBound()
+        else:
+            return self.depth() > other.depth()
+
+    def path( self ):
+        return self.pppath
+
+    def lowerBound( self ):
+        return self.lb
+
+    # Get the depth of the subproblem
+    def depth( self ):
+        return len( self.pppath )
+
+    # Get the city that we are currently in
+    def last( self ):
+        return self.pppath[ -1 ]
+
+    def rMatrix( self ):
+        return self.rmatrix
