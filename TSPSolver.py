@@ -368,6 +368,9 @@ class TSPSolver:
         # 1st layer
         for i in range( 1, ncities ):
             for key, value in cost_lookup[0].items():
+                if (time.time() - start_time > time_allowance):
+                    return self.createResultsDictionary(bssf['cost'], time.time() - start_time, bssf['count'], bssf['soln'], bssf['max'], bssf['total'], bssf['pruned'])
+                    
                 if key[0] == i:
                     pass
                 else:
@@ -386,6 +389,9 @@ class TSPSolver:
                 # Loop through each item in the previous layer
                 # Skip if the city is in route
                 for key, value in cost_lookup[i-1].items():
+                    if (time.time() - start_time > time_allowance):
+                        return self.createResultsDictionary(bssf['cost'], time.time() - start_time, bssf['count'], bssf['soln'], bssf['max'], bssf['total'], bssf['pruned'])
+
                     if key[0] == j or j in key[1]:
                         pass
                     else:
@@ -400,13 +406,13 @@ class TSPSolver:
                 # Input each value
                 # If there is already a value, choose whichever has a smaller cost
                 for value_idx, key in enumerate(key_array):
+                    if (time.time() - start_time > time_allowance):
+                        return self.createResultsDictionary(bssf['cost'], time.time() - start_time, bssf['count'], bssf['soln'], bssf['max'], bssf['total'], bssf['pruned'])
+
                     if cost_lookup[i].get(key, None) == None:
                         cost_lookup[i][key] = value_array[value_idx]
                     else:
                         cost_lookup[i][key] = min( cost_lookup[i][key], value_array[value_idx] )
-
-                if (time.time() - start_time > time_allowance):
-                    return self.createResultsDictionary(bssf['cost'], time.time() - start_time, bssf['count'], bssf['soln'], bssf['max'], bssf['total'], bssf['pruned'])
 
         # Last layer
         # We need to do this because we have added every city to the set
@@ -414,6 +420,9 @@ class TSPSolver:
         # We are not really storing the last value in the table
         value_array = []
         for key, value in cost_lookup[ncities-2].items():
+            if (time.time() - start_time > time_allowance):
+                return self.createResultsDictionary(bssf['cost'], time.time() - start_time, bssf['count'], bssf['soln'], bssf['max'], bssf['total'], bssf['pruned'])
+
             sub = Subproblem(original_matrix[0][key[0]] + value.cost, 0, value.route)
             value_array.append(sub)
             #print("p: {}, sub:{}".format(p, sub) )
